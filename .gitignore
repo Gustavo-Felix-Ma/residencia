@@ -1,0 +1,137 @@
+# =====================================================================
+# Entorno Virtual de Python (Virtual Environments)
+# =====================================================================
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+pyvenv.cfg
+
+# =====================================================================
+# Python - Caché y Archivos Compilados
+# =====================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# =====================================================================
+# Pruebas y Cobertura (Pytest, Coverage)
+# =====================================================================
+.pytest_cache/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+
+# =====================================================================
+# Frontend & Node.js (Vite / React)
+# =====================================================================
+node_modules/
+*/node_modules/
+dist/
+*/dist/
+dist-ssr/
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# =====================================================================
+# Variables de Entorno y Secretos (Seguridad)
+# =====================================================================
+.env
+.env.*
+!.env.example
+!.env.template
+*.env
+
+# Claves criptográficas privadas generadas localmente / certificados
+*.pem
+*.key
+*.priv
+*.pfx
+*.p12
+*.pkcs12
+keys/
+private_keys/
+secrets/
+
+# =====================================================================
+# Archivos Temporales y Documentos Generados
+# =====================================================================
+temp/
+tmp/
+*.tmp
+*.temp
+*.bak
+uploads/
+temp_docs/
+signed_docs/
+storage/
+
+# =====================================================================
+# Bases de Datos Locales
+# =====================================================================
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+
+# =====================================================================
+# Logs
+# =====================================================================
+logs/
+*.log
+
+# =====================================================================
+# Editores y Entornos de Desarrollo (IDEs)
+# =====================================================================
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.sublime-project
+*.sublime-workspace
+
+# =====================================================================
+# Sistema Operativo y Almacenamiento en la Nube (OneDrive / Windows / Mac)
+# =====================================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
