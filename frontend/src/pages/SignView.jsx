@@ -1,31 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import { formatDateTime } from '../lib/constants';
 import { PenTool, ShieldAlert, KeyRound } from 'lucide-react';
 
-export default function SignView({ onOpenSign, onOpenKeyModal }) {
+export default function SignView({ onOpenSign, onOpenKeyModal, refreshTrigger }) {
   const { currentProfile, hasKeys } = useAuth();
   const [documents, setDocuments] = useState([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadPendingDocuments();
-  }, []);
+  }, [refreshTrigger, currentProfile?.id]);
 
   const loadPendingDocuments = async () => {
-    setLoading(true);
     try {
-      let query = supabase.from('documents').select('*').eq('status', 'pending').order('created_at', { ascending: false });
+      let query = supabase
+        .from('documents')
+        .select('*')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
       if (currentProfile?.role === 'docente') {
         query = query.eq('uploaded_by', currentProfile.id);
       }
+
       const { data, error } = await query;
       if (error) throw error;
       setDocuments(data || []);
     } catch (err) {
       console.error('Error al cargar pendientes:', err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -39,7 +42,7 @@ export default function SignView({ onOpenSign, onOpenKeyModal }) {
       </div>
 
       {!hasKeys && (
-        <div className="alert alert-warning mb-6 p-4 rounded-xl flex items-center justify-between bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800">
+        <div className="alert alert-warning mb-6 p-4 rounded-xl flex flex-wrap items-center justify-between gap-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800" style={{ display: 'flex' }}>
           <div className="flex items-center gap-3">
             <ShieldAlert className="w-6 h-6 text-amber-600 shrink-0" />
             <div>
@@ -58,25 +61,29 @@ export default function SignView({ onOpenSign, onOpenKeyModal }) {
 
       <div className="table-container bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div className="table-header p-4 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="font-semibold text-sm">Documentos Pendientes de Firma</h3>
+          <h3 className="font-semibold text-sm">Documentos pendientes</h3>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="w-full text-left text-sm min-w-[650px]">
             <thead className="bg-gray-50 dark:bg-gray-900 text-xs uppercase text-gray-500 border-b border-gray-200 dark:border-gray-700">
               <tr>
                 <th className="px-6 py-3">Documento</th>
-                <th className="px-6 py-3">Cargado Por</th>
+                <th className="px-6 py-3">Categoría</th>
+                <th className="px-6 py-3">Cargado por</th>
                 <th className="px-6 py-3">Fecha</th>
                 <th className="px-6 py-3">Estado</th>
-                <th className="px-6 py-3">Acción</th>
+                <th className="px-6 py-3">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {documents.map((doc) => (
                 <tr key={doc.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                  <td className="px-6 py-4 font-medium truncate max-w-xs">📄 {doc.name}</td>
+                  <td className="px-6 py-4 font-medium truncate max-w-xs" title={doc.name}>
+                    📄 {doc.name}
+                  </td>
+                  <td className="px-6 py-4 text-xs">{doc.category || 'Sin categoría'}</td>
                   <td className="px-6 py-4">{doc.uploaded_by_name}</td>
-                  <td className="px-6 py-4 text-xs text-gray-500">{new Date(doc.created_at).toLocaleDateString('es-ES')}</td>
+                  <td className="px-6 py-4 text-xs text-gray-500">{formatDateTime(doc.created_at)}</td>
                   <td className="px-6 py-4">
                     <span className="status-badge status-pending">⏳ Pendiente</span>
                   </td>
@@ -87,7 +94,7 @@ export default function SignView({ onOpenSign, onOpenKeyModal }) {
                       className="btn btn-success btn-sm gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <PenTool className="w-4 h-4" />
-                      <span>Firmar PDF</span>
+                      <span>Firmar</span>
                     </button>
                   </td>
                 </tr>
@@ -95,8 +102,8 @@ export default function SignView({ onOpenSign, onOpenKeyModal }) {
 
               {documents.length === 0 && (
                 <tr>
-                  <td colSpan="5" className="text-center py-8 text-gray-500 text-sm">
-                    No hay documentos pendientes de firma
+                  <td colSpan="6" className="text-center py-8 text-gray-500 text-sm">
+                    No hay pendientes
                   </td>
                 </tr>
               )}

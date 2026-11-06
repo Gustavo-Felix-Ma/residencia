@@ -68,7 +68,10 @@ lerna-debug.log*
 .env
 .env.*
 !.env.example
+!*/.env.example
 !.env.template
+.vercel/
+backend/test_*.py
 *.env
 
 # Claves criptográficas privadas generadas localmente / certificados

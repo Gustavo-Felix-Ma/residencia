@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
+import CompleteInviteView from './pages/CompleteInviteView';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import KeyModal from './components/KeyModal';
@@ -11,18 +12,14 @@ import SignView from './pages/SignView';
 import VerifyView from './pages/VerifyView';
 import HistoryView from './pages/HistoryView';
 import UsersView from './pages/UsersView';
-import VerifyPublic from './pages/VerifyPublic';
+import SettingsView from './pages/SettingsView';
 
 function MainApp() {
-  const { currentUser, loading } = useAuth();
+  const { currentUser, currentProfile, needsAccountSetup, loading } = useAuth();
   const [activeSection, setActiveSection] = useState('inicio');
   const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
   const [selectedSignDoc, setSelectedSignDoc] = useState(null);
-
-  // Comprobar si la ruta actual es /verificar
-  if (window.location.pathname === '/verificar') {
-    return <VerifyPublic />;
-  }
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   if (loading) {
     return (
@@ -39,6 +36,14 @@ function MainApp() {
     return <Login />;
   }
 
+  if (needsAccountSetup) {
+    return <CompleteInviteView />;
+  }
+
+  const role = currentProfile?.role;
+  const canViewUsers = ['jefe_division', 'presidente_academia', 'secretario_academia'].includes(role);
+  const canViewSettings = role === 'jefe_division';
+
   return (
     <div className="app-layout min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors">
       <Header onOpenKeyModal={() => setIsKeyModalOpen(true)} />
@@ -46,13 +51,25 @@ function MainApp() {
       <div className="dashboard-body flex-1 flex overflow-hidden">
         <Sidebar activeSection={activeSection} setActiveSection={setActiveSection} />
 
-        <main className="main-content flex-1 p-8 overflow-y-auto">
-          {activeSection === 'inicio' && <DashboardView />}
-          {activeSection === 'documentos' && <DocumentsView onOpenSign={(doc) => setSelectedSignDoc(doc)} />}
-          {activeSection === 'firmar' && <SignView onOpenSign={(doc) => setSelectedSignDoc(doc)} onOpenKeyModal={() => setIsKeyModalOpen(true)} />}
-          {activeSection === 'verificar' && <VerifyView />}
-          {activeSection === 'historial' && <HistoryView />}
-          {activeSection === 'usuarios' && <UsersView />}
+        <main className="main-content flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto">
+          {activeSection === 'inicio' && <DashboardView refreshTrigger={refreshTrigger} />}
+          {activeSection === 'documentos' && (
+            <DocumentsView
+              onOpenSign={(doc) => setSelectedSignDoc(doc)}
+              refreshTrigger={refreshTrigger}
+            />
+          )}
+          {activeSection === 'firmar' && (
+            <SignView
+              onOpenSign={(doc) => setSelectedSignDoc(doc)}
+              onOpenKeyModal={() => setIsKeyModalOpen(true)}
+              refreshTrigger={refreshTrigger}
+            />
+          )}
+          {activeSection === 'verificar' && <VerifyView refreshTrigger={refreshTrigger} />}
+          {activeSection === 'historial' && <HistoryView refreshTrigger={refreshTrigger} />}
+          {activeSection === 'usuarios' && canViewUsers && <UsersView />}
+          {activeSection === 'configuracion' && canViewSettings && <SettingsView />}
         </main>
       </div>
 
@@ -65,6 +82,7 @@ function MainApp() {
         document={selectedSignDoc}
         isOpen={!!selectedSignDoc}
         onClose={() => setSelectedSignDoc(null)}
+        onSuccess={() => setRefreshTrigger((n) => n + 1)}
       />
     </div>
   );

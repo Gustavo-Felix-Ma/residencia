@@ -1,0 +1,27 @@
+# Entornos virtuales y dependencias locales
+venv/
+.venv/
+node_modules/
+frontend/node_modules/
+
+# Variables de entorno locales y secretos (nunca subir a Vercel)
+.env
+.env.*
+backend/.env
+backend/.env.*
+frontend/.env
+frontend/.env.*
+*.env
+*.pem
+*.key
+*.priv
+*.pfx
+*.p12
+
+# Pruebas y scripts de diagnóstico local
+backend/tests/
+backend/test_db.py
+.pytest_cache/
+__pycache__/
+**/__pycache__/
+

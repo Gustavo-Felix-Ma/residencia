@@ -1,9 +1,13 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Literal, Optional
+
+RoleType = Literal["jefe_division", "presidente_academia", "secretario_academia", "docente"]
+
 
 class KeyGenerationRequest(BaseModel):
     user_id: str
     pin: str = Field(..., min_length=6, description="PIN personal de 6+ caracteres para cifrar la clave privada")
+
 
 class KeyStatusResponse(BaseModel):
     has_keys: bool
@@ -11,10 +15,12 @@ class KeyStatusResponse(BaseModel):
     mldsa_public_hex: Optional[str] = None
     created_at: Optional[str] = None
 
+
 class SignDocumentRequest(BaseModel):
     document_id: str
     user_id: str
     pin: str = Field(..., min_length=6)
+
 
 class SignDocumentResponse(BaseModel):
     success: bool
@@ -22,7 +28,7 @@ class SignDocumentResponse(BaseModel):
     doc_hash: str
     rsa_signature: str
     mldsa_signature: str
-    signed_storage_path: str
+
 
 class VerifyResponse(BaseModel):
     is_valid: bool
@@ -37,3 +43,14 @@ class VerifyResponse(BaseModel):
     rsa_signature: Optional[str] = None
     mldsa_signature: Optional[str] = None
     message: str
+
+
+class InviteUserRequest(BaseModel):
+    email: str = Field(..., min_length=5, description="Correo electrónico institucional o personal del invitado")
+    role: RoleType
+
+
+class InviteUserResponse(BaseModel):
+    success: bool
+    message: str
+    user_id: Optional[str] = None

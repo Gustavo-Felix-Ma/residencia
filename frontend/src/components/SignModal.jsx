@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { signDocument } from '../lib/api';
-import { supabase } from '../lib/supabase';
-import { FileText, CheckCircle2, Lock, Download, Loader2 } from 'lucide-react';
+import { downloadOriginalPdf, downloadSignatureReceipt } from '../lib/download';
+import { formatFileSize } from '../lib/constants';
+import { FileText, CheckCircle2, Lock, Download, FileCode, Loader2 } from 'lucide-react';
 
 export default function SignModal({ document: doc, isOpen, onClose, onSuccess }) {
   const { currentProfile } = useAuth();
@@ -10,6 +11,14 @@ export default function SignModal({ document: doc, isOpen, onClose, onSuccess })
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setPin('');
+      setError('');
+      setResult(null);
+    }
+  }, [doc, isOpen]);
 
   if (!isOpen || !doc) return null;
 
@@ -35,39 +44,49 @@ export default function SignModal({ document: doc, isOpen, onClose, onSuccess })
     }
   };
 
-  const handleDownload = async () => {
-    if (!result?.signed_storage_path) return;
+  const signedDocRecord = result
+    ? {
+        ...doc,
+        status: 'signed',
+        signed_by: currentProfile?.full_name,
+        signed_at: new Date().toISOString(),
+        doc_hash: result.doc_hash,
+        rsa_signature: result.rsa_signature,
+        mldsa_signature: result.mldsa_signature,
+      }
+    : doc;
+
+  const handleDownloadPdf = async () => {
     try {
-      const { data, error } = await supabase.storage
-        .from('documents')
-        .download(result.signed_storage_path);
-
-      if (error) throw error;
-
-      const url = URL.createObjectURL(data);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${doc.name.replace('.pdf', '')}_firmado_oficial.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
+      await downloadOriginalPdf(signedDocRecord, currentProfile);
     } catch (err) {
-      alert('Error al descargar PDF firmado: ' + err.message);
+      alert('Error al descargar PDF: ' + err.message);
+    }
+  };
+
+  const handleDownloadReceipt = async () => {
+    try {
+      await downloadSignatureReceipt(signedDocRecord, currentProfile);
+    } catch (err) {
+      alert('Error al descargar constancia: ' + err.message);
     }
   };
 
   return (
-    <div className="modal-overlay active">
+    <div className="modal-overlay active" onClick={(e) => e.target === e.currentTarget && !loading && onClose()}>
       <div className="modal modal-lg">
         <div className="modal-header">
           <div className="flex items-center gap-2">
             <FileText className="w-5 h-5 text-accent" />
             <h3 className="font-bold text-lg">Firma Digital Híbrida (RSA-2048 + ML-DSA-87)</h3>
           </div>
-          <button className="modal-close" onClick={onClose}>&times;</button>
+          <button className="modal-close" onClick={onClose} disabled={loading}>&times;</button>
         </div>
         <div className="modal-body">
           <div className="alert alert-info mb-4" style={{ display: 'flex' }}>
-            <span>📄 Documento seleccionado: <b>{doc.name}</b> ({ (doc.size / 1024).toFixed(1) } KB)</span>
+            <span>
+              📄 Documento: <b>{doc.name}</b> · Categoría: <b>{doc.category || 'Sin categoría'}</b> ({formatFileSize(doc.size)})
+            </span>
           </div>
 
           {error && (
@@ -79,57 +98,67 @@ export default function SignModal({ document: doc, isOpen, onClose, onSuccess })
           {!result ? (
             <form onSubmit={handleSign}>
               <div className="form-group mb-4">
-                <label className="block text-sm font-semibold mb-1">Ingrese su PIN de Seguridad para Desbloquear Llave Privada</label>
-                <div className="input-wrapper">
+                <label className="block text-sm font-semibold mb-1.5">
+                  Ingrese su PIN de Seguridad para Desbloquear su Llave Privada
+                </label>
+                <div className="relative flex items-center">
                   <input
                     type="password"
                     value={pin}
                     onChange={(e) => setPin(e.target.value)}
-                    placeholder="PIN de 6 dígitos"
+                    placeholder="PIN de seguridad (6+ caracteres)"
                     required
                     disabled={loading}
                     autoFocus
+                    className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:border-accent outline-none"
                   />
-                  <span className="input-icon">🔒</span>
+                  <span className="absolute left-3">🔒</span>
                 </div>
               </div>
 
-              <div className="modal-footer mt-6">
+              <div className="modal-footer mt-6 px-0 pb-0">
                 <button type="button" className="btn btn-outline" onClick={onClose} disabled={loading}>
                   Cancelar
                 </button>
                 <button type="submit" className="btn btn-success gap-2" disabled={loading}>
                   {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
-                  <span>{loading ? 'Descifrando y Aplicando ML-DSA-87...' : 'Firmar Documento'}</span>
+                  <span>{loading ? 'Descifrando y Firmando con ML-DSA-87...' : 'Firmar Documento'}</span>
                 </button>
               </div>
             </form>
           ) : (
-            <div className="sign-result mt-4">
-              <div className="flex items-center gap-2 mb-3 text-emerald-600">
+            <div className="sign-result mt-2">
+              <div className="flex items-center gap-2 mb-3 text-emerald-600 dark:text-emerald-400">
                 <CheckCircle2 className="w-6 h-6" />
-                <h4 className="font-bold text-base">¡Documento Firmado y Certificado con Éxito!</h4>
+                <h4 className="font-bold text-base">¡Firmas Criptográficas Aplicadas Correctamente!</h4>
               </div>
-              <p className="text-xs mb-2"><strong>Hash SHA-256 Binario Real:</strong></p>
-              <code className="block bg-gray-100 dark:bg-gray-800 p-2 rounded text-xs break-all font-mono text-primary mb-3">
+
+              <p className="text-xs mb-1.5"><strong>Hash SHA-256 Binario Real:</strong></p>
+              <code className="block bg-gray-100 dark:bg-gray-800 p-2.5 rounded text-xs break-all font-mono text-primary dark:text-accent mb-3">
                 {result.doc_hash}
               </code>
-              <p className="text-xs mb-2"><strong>Firma Clásica RSA-2048 (RSASSA-PSS):</strong></p>
-              <code className="block bg-gray-100 dark:bg-gray-800 p-2 rounded text-xs break-all font-mono text-primary mb-3">
-                {result.rsa_signature.substring(0, 80)}...
+
+              <p className="text-xs mb-1.5"><strong>Firma Clásica RSA-2048 (RSASSA-PSS):</strong></p>
+              <code className="block bg-gray-100 dark:bg-gray-800 p-2.5 rounded text-xs break-all font-mono text-primary dark:text-blue-300 mb-3">
+                {result.rsa_signature.substring(0, 96)}...
               </code>
-              <p className="text-xs mb-2"><strong>Firma Post-Cuántica ML-DSA-87 (FIPS 204):</strong></p>
-              <code className="block bg-gray-100 dark:bg-gray-800 p-2 rounded text-xs break-all font-mono text-purple mb-4">
+
+              <p className="text-xs mb-1.5"><strong>Firma Post-Cuántica ML-DSA-87 (FIPS 204):</strong></p>
+              <code className="block bg-gray-100 dark:bg-gray-800 p-2.5 rounded text-xs break-all font-mono text-purple-700 dark:text-purple-300 mb-4">
                 {result.mldsa_signature.substring(0, 120)}... [4,627 Bytes]
               </code>
 
-              <div className="modal-footer mt-6">
-                <button className="btn btn-outline" onClick={onClose}>
+              <div className="modal-footer mt-6 px-0 pb-0 flex-wrap">
+                <button type="button" className="btn btn-outline" onClick={onClose}>
                   Cerrar
                 </button>
-                <button className="btn btn-success gap-2" onClick={handleDownload}>
+                <button type="button" className="btn btn-outline gap-2" onClick={handleDownloadReceipt}>
+                  <FileCode className="w-4 h-4" />
+                  <span>Constancia (.txt)</span>
+                </button>
+                <button type="button" className="btn btn-success gap-2" onClick={handleDownloadPdf}>
                   <Download className="w-4 h-4" />
-                  <span>Descargar PDF Oficial Firmado con QR</span>
+                  <span>Descargar PDF</span>
                 </button>
               </div>
             </div>
